@@ -9,4 +9,8 @@ class TodoListApp: Application() {
     val appComponent: AppComponent by lazy {
         DaggerAppComponent.factory().create(applicationContext)
     }
+
+//    override fun applicationInjector(): AndroidInjector<out DaggerApplication> {
+//        return DaggerApplicationComponent.factory().create(applicationContext)
+//    }
 }

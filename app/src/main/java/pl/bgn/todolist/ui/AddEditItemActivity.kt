@@ -4,35 +4,43 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import pl.bgn.todolist.R
-import pl.bgn.todolist.databinding.ActivityTodoItemBinding
+import pl.bgn.todolist.TodoListApp
 import pl.bgn.todolist.data.TodoItem
+import pl.bgn.todolist.databinding.ActivityTodoItemBinding
 import pl.bgn.todolist.utils.DescriptionValidator
 import pl.bgn.todolist.utils.IconValidator
 import pl.bgn.todolist.utils.TitleValidator
-import pl.bgn.todolist.viewmodel.ToDoItemViewModel
-import pl.bgn.todolist.viewmodel.ToDoItemViewModelFactory
+import pl.bgn.todolist.viewmodel.TodoItemViewModel
+import javax.inject.Inject
 
-class ToDoItemActivity : AppCompatActivity() {
+class AddEditItemActivity : AppCompatActivity() {
 
     private lateinit var titleValidator: TitleValidator
     private lateinit var descriptionValidator: DescriptionValidator
     private lateinit var iconValidator: IconValidator
+
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
+
+    private val viewModel by viewModels<TodoItemViewModel> { viewModelFactory }
 
     private val todoItemUuid: String? by lazy {
         intent.getStringExtra(EXTRA_TODO_UUID)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        (application as TodoListApp).appComponent.inject(this)
+
         super.onCreate(savedInstanceState)
         val binding: ActivityTodoItemBinding = DataBindingUtil.setContentView(this, R.layout.activity_todo_item)
-        val viewModelFactory = ToDoItemViewModelFactory(todoItemUuid)
-        val viewModel = ViewModelProvider(this, viewModelFactory).get(ToDoItemViewModel::class.java)
         binding.viewModel = viewModel
+        binding.lifecycleOwner = this
 
         titleValidator = TitleValidator(this, binding.labelTitle, binding.title)
         descriptionValidator = DescriptionValidator(this, binding.labelDesc, binding.desc)
@@ -48,7 +56,11 @@ class ToDoItemActivity : AppCompatActivity() {
                 val icon: String? = binding.icon.text.toString()
                 val description = binding.desc.text.toString()
                 val todoItem = TodoItem()
-                if(todoItemUuid != null) todoItem.uuid = todoItemUuid!!
+                setResult(MainActivity.RESULT_ADD)
+                if(todoItemUuid != null) {
+                    todoItem.uuid = todoItemUuid!!
+                    setResult(MainActivity.RESULT_UPDATE)
+                }
                 todoItem.icon = if(icon == "") null else icon
                 todoItem.description = description
                 todoItem.title = title
@@ -59,6 +71,8 @@ class ToDoItemActivity : AppCompatActivity() {
                 it.isEnabled = true
             }
         }
+
+        viewModel.start(todoItemUuid)
     }
 
     private fun checkValidation() : Boolean = titleValidator.isValid && descriptionValidator.isValid && iconValidator.isValid
@@ -69,7 +83,7 @@ class ToDoItemActivity : AppCompatActivity() {
         private const val EXTRA_TODO_UUID = "pl.bgn.todolist.ui.extra.uuid"
 
         fun newIntent(context: Context, uuid: String): Intent {
-            val intent = Intent(context, ToDoItemActivity::class.java)
+            val intent = Intent(context, AddEditItemActivity::class.java)
             intent.putExtra(EXTRA_TODO_UUID, uuid)
             return intent
         }

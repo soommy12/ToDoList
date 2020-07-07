@@ -3,24 +3,20 @@ package pl.bgn.todolist.viewmodel
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import pl.bgn.todolist.data.source.FirestoreRepository
 import pl.bgn.todolist.data.TodoItem
+import pl.bgn.todolist.data.source.FirestoreRepository
+import javax.inject.Inject
 
-class MainViewModel: ViewModel() {
+class MainViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository): ViewModel() {
 
-    private val db = Firebase.firestore
-    private var _todoItems: MutableLiveData<MutableList<TodoItem>> = MutableLiveData()
     private var _shouldRefresh: MutableLiveData<Boolean> = MutableLiveData()
-    private var firebaseRepository = FirestoreRepository()
 
     init {
         listenToTodoItems()
     }
 
     private fun listenToTodoItems() {
-        firebaseRepository.getAllTodoItems().addSnapshotListener { snapshot, e ->
+        firestoreRepository.getAllTodoItems().addSnapshotListener { snapshot, e ->
             if(e != null) {
                 Log.w(TAG, "Listening failed...", e)
                 return@addSnapshotListener
@@ -32,7 +28,7 @@ class MainViewModel: ViewModel() {
     }
 
     fun deleteItem(item: TodoItem) {
-        firebaseRepository.deleteTodoItem(item)
+        firestoreRepository.deleteTodoItem(item)
     }
 
     internal var shouldRefresh: MutableLiveData<Boolean>

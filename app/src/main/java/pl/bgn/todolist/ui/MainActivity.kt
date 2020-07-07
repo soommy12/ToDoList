@@ -3,6 +3,7 @@ package pl.bgn.todolist.ui
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
@@ -12,36 +13,47 @@ import androidx.paging.PagedList
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.firebase.ui.firestore.paging.FirestorePagingOptions
 import com.google.android.gms.tasks.Task
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import pl.bgn.todolist.R
+import pl.bgn.todolist.TodoListApp
 import pl.bgn.todolist.adapters.TodoItemsListAdapter
-import pl.bgn.todolist.databinding.ActivityMainBinding
 import pl.bgn.todolist.data.TodoItem
+import pl.bgn.todolist.data.source.FirestoreRepository
+import pl.bgn.todolist.databinding.ActivityMainBinding
 import pl.bgn.todolist.viewmodel.MainViewModel
+import javax.inject.Inject
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var viewModel: MainViewModel
-    private lateinit var binding: ActivityMainBinding
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
+
+    @Inject
+    lateinit var firestoreRepository: FirestoreRepository
+
     private lateinit var mAdapter: TodoItemsListAdapter
-    private val mQuery = Firebase.firestore.collection("todoitems").orderBy("dateOfCreation", Query.Direction.DESCENDING)
+    private val viewModel by viewModels<MainViewModel> { viewModelFactory }
+    private lateinit var binding: ActivityMainBinding
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        (application as TodoListApp).appComponent.inject(this)
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         setSupportActionBar(binding.toolbar)
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
 
         binding.swipeRefreshLayout.setOnRefreshListener { mAdapter.refresh() }
 
         binding.fab.setOnClickListener {
-            startActivityForResult(Intent(this@MainActivity, ToDoItemActivity::class.java), REQUEST_TODO_ITEM)
+            startActivityForResult(Intent(this@MainActivity, AddEditItemActivity::class.java), REQUEST_TODO_ITEM)
         }
 
         binding.recyclerView.apply {
             setHasFixedSize(true)
+            isMotionEventSplittingEnabled = false
             layoutManager = LinearLayoutManager(this@MainActivity)
         }
 
@@ -52,34 +64,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-//        addRandomPosts()
-    }
-
-    private fun addRandomPosts() {
-        createPosts().addOnCompleteListener {
-            if (it.isSuccessful) {
-                Toast.makeText(
-                    applicationContext,
-                    "Posts Added!",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
-
-    private fun createPosts(): Task<Void> {
-        val writeBatch = Firebase.firestore.batch();
-
-        for (i in 0..300) {
-            val title = "Title $i"
-            val desc = "Desc for is message $i."
-            val icon = "http://i.imgur.com/DvpvklR.png"
-            val todoitem = TodoItem(title = title, description = desc/*, icon = icon*/)
-
-            writeBatch.set(Firebase.firestore.collection("todoitems").document(todoitem.uuid), todoitem)
-        }
-
-        return writeBatch.commit()
     }
 
     private fun setupAdapter() {
@@ -91,17 +75,17 @@ class MainActivity : AppCompatActivity() {
 
         val options = FirestorePagingOptions.Builder<TodoItem>()
             .setLifecycleOwner(this)
-            .setQuery(mQuery, config, TodoItem::class.java)
+            .setQuery(firestoreRepository.getQuery(), config, TodoItem::class.java)
             .build()
 
         mAdapter = TodoItemsListAdapter(
-            { item -> startActivityForResult(ToDoItemActivity.newIntent(this@MainActivity, item.uuid), REQUEST_TODO_ITEM) },
+            { item -> startActivityForResult(AddEditItemActivity.newIntent(this@MainActivity, item.uuid), REQUEST_TODO_ITEM) },
             { item ->
                 val builder = AlertDialog.Builder(this)
-                builder.setTitle("Delete")
-                builder.setMessage("Do you want to delete this item?")
-                builder.setPositiveButton("Yes") { _, _ -> viewModel.deleteItem(item) }
-                builder.setNegativeButton("No") { _, _ -> }
+                builder.setTitle(getString(R.string.alert_delete_item_title))
+                builder.setMessage(getString(R.string.alert_delete_item_message))
+                builder.setPositiveButton(getString(R.string.yes)) { _, _ -> viewModel.deleteItem(item) }
+                builder.setNegativeButton(getString(R.string.no)) { _, _ -> }
                 builder.create().show()
                 true
             },
@@ -114,11 +98,18 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode == REQUEST_TODO_ITEM) {
-//            Toast.makeText(this, "Back from details", Toast.LENGTH_SHORT).show()
+            val toastMsg = when(resultCode) {
+                RESULT_ADD -> R.string.toast_item_added
+                RESULT_UPDATE -> R.string.toast_item_updated
+                else -> null
+            }
+            if(toastMsg != null) Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
         }
     }
 
     companion object {
-        private const val REQUEST_TODO_ITEM = 123
+        private const val REQUEST_TODO_ITEM = 1
+        const val RESULT_ADD = 2
+        const val RESULT_UPDATE = 3
     }
 }
