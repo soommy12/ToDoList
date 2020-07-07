@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">ToDoList</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>t
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="item_icon">Item icon</string>
+    <string name="title">Title</string>
+    <string name="icon_url">Icon (optional)</string>
+    <string name="descritption">Descritpion</string>
+    <string name="save">Save</string>
+    <string name="error_title_empty">Title cannot be empty!</string>
+    <string name="error_title_to_long">Title should be shorter than 30 characters!</string>
+    <string name="error_validation">Invalid title, icon or description</string>
+    <string name="error_description_empty">Description cannot be empty!</string>
+    <string name="error_description_to_long">Description should be shorter than 30 characters!</string>
+    <string name="error_icon_not_link">Icon (optional) should be in link format!</string>
+</resources>
